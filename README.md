@@ -1,44 +1,45 @@
 # Northwind Complaint Recovery
 
-CGI Challenge (Hack the Hill III) briefing and plan for Northwind Utilities.
+CGI Challenge (Hack the Hill III) briefing for Northwind Utilities.
 
-**Notion plan:** [Hack the Hill III](https://app.notion.com/p/Hack-the-Hill-III-3e760cc75b7780b6a543c16996c597c1)
+**Plan (Notion):** [Hack the Hill III](https://app.notion.com/p/Hack-the-Hill-III-3e760cc75b7780b6a543c16996c597c1)
 
-## Diagnosis (short)
+## Problem
 
-The complaint queue grows because estimated / missing meter reads create wrong bills faster than the contact centre can close cases. About **68%** of the **1,599** open cases are disputed bill, estimated read, or no read. AskNorthwind (9 months, **$480k**) failed because it could not correct a bill. Cost figures are the challenge file numbers treated as **CAD ($)**.
+Estimated and missing meter reads create most complaints. About **68%** of the **1,599** open cases are a disputed bill, an estimated read, or no read taken. The team opens about **1,185** complaints a month and closes about **1,129**, so the queue grows.
 
-## What we propose to build
+Transfers make cases worse ($68 / ~23 days same-system vs $121 / ~38 days transferred). A typical bill correction takes a median of **28** days; only one day is the overnight billing file. AskNorthwind failed because it could not correct a bill. Figures are CAD (**$**).
 
-Not a new CRM. Not another chatbot. Not the **$77m** smart-meter rollout.
+## What we will not build
 
-### 1. Stop the bad bills (primary)
+Not a new CRM. Not another chatbot. Not the **$77m** smart-meter rollout for Barrowdale and Dunmoor.
 
-Gate estimated bills that are far from the last real read or last correction. Fix inside Northwind before the customer sees them. Write corrections back to MeterHub (estimator unchanged since 2012).
+## Two builds
 
-**Effect:** inflow ~1,185 → ~440 / month. Existing close rate ~1,129 → backlog clears around **month 3**.
+### 1. Bill gate + MeterHub feedback
 
-### 2. One agent screen (secondary)
+Hold bills when an estimate is far from the last real read or last correction. Fix them inside Northwind before the customer sees them. Write each correction back to MeterHub.
 
-One view: account, latest read, bill, case. Finish without transferring. Helix and Aurora stay.
+New complaints fall to about **440** / month. With today’s close rate, the queue clears around **month 3** with no new agents.
 
-**Effect:** fewer transfers ($121 / 38 days vs $68 / 23 days). Month **9** clear only if freed time becomes real capacity.
+### 2. One agent screen (includes same-day bill post)
 
-### 3. Same-day bill post (inside that screen)
+One view: account, latest read, bill, and case. Finish without transferring. Same-day bill write so the correction does not wait for the nightly file.
 
-Nightly batch is **1 day** of a **28-day** median. Same-day write removes ~**37** cases. Does **not** clear the queue alone.
+Same-day posting alone removes about **37** cases and does not clear the backlog. Combined with the bill gate, the queue clears around **month 2**.
 
-## Dashboard
+## Hire path (not preferred)
 
-Interactive demo from the six challenge CSVs.
+Clearing in 12 months while bad bills keep arriving takes about **3.4** agents and about **$155k** / year. The cause remains.
+
+## Run the dashboard
 
 ```bash
-# from repo root
 python3 -m http.server 8765
 # open http://127.0.0.1:8765/dashboard/index.html
 ```
 
-Optional: rebuild `dashboard/data.js` from CSVs:
+Optional rebuild of `dashboard/data.js`:
 
 ```bash
 python3 -m venv .venv
@@ -46,14 +47,9 @@ python3 -m venv .venv
 .venv/bin/python dashboard/build_data.py
 ```
 
-## Data
-
-Synthetic pack in `Northwind_Challenge_Data/` (safe to commit). Do not use real customer data.
-
-## Repo layout
+## Layout
 
 | Path | Contents |
 | --- | --- |
-| `dashboard/` | Live briefing (`index.html`, `data.js`, `build_data.py`) |
-| `Northwind_Challenge_Data/` | Six challenge CSVs |
-| Notion link above | Full delivery plan, sequence, risks |
+| `dashboard/` | Live briefing |
+| `Northwind_Challenge_Data/` | Six synthetic challenge CSVs |
