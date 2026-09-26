@@ -1,45 +1,34 @@
 # Northwind Complaint Recovery
 
-CGI Challenge (Hack the Hill III) briefing for Northwind Utilities.
+CGI Challenge briefing for Northwind Utilities.
 
-**Plan (Notion):** [Hack the Hill III](https://app.notion.com/p/Hack-the-Hill-III-3e760cc75b7780b6a543c16996c597c1)
+**Plan:** [Hack the Hill III](https://app.notion.com/p/Hack-the-Hill-III-3e760cc75b7780b6a543c16996c597c1)
+
+**Repo:** [northwind-complaint-recovery](https://github.com/moazsholook/northwind-complaint-recovery)
 
 ## Problem
 
-Estimated and missing meter reads create most complaints. About **68%** of the **1,599** open cases are a disputed bill, an estimated read, or no read taken. The team opens about **1,185** complaints a month and closes about **1,129**, so the queue grows.
+**68%** of **1,599** open cases are bad bills from estimated or missing reads. About **1,185** open a month and **1,129** close, so the queue grows. A same-system case costs **$68** and takes **23** days. A transfer costs **$121** and takes **38** days. A bill correction takes a median of **28** days. One day is the nightly file. AskNorthwind could not correct a bill. Figures are CAD (**$**).
 
-Transfers make cases worse ($68 / ~23 days same-system vs $121 / ~38 days transferred). A typical bill correction takes a median of **28** days; only one day is the overnight billing file. AskNorthwind failed because it could not correct a bill. Figures are CAD (**$**).
-
-## What we will not build
+## Not building
 
 Not a new CRM. Not another chatbot. Not the **$77m** smart-meter rollout for Barrowdale and Dunmoor.
 
-## Two builds
+## Builds
 
-### 1. Bill gate + MeterHub feedback
+1. **Bill gate.** Hold a bill when the estimate is far from the last real read or correction. Write the correction back to MeterHub. Inflow falls to about **440** a month. The queue clears around **month 3**. No new agents.
+2. **One agent screen.** Show the account, read, bill, and case together so the case is not transferred. Include a same-day bill post. That post alone removes about **37** cases. With the gate, the queue clears around **month 2**.
 
-Hold bills when an estimate is far from the last real read or last correction. Fix them inside Northwind before the customer sees them. Write each correction back to MeterHub.
+Hiring through the gap is about **3.4** agents and **$155k** a year. The cause stays.
 
-New complaints fall to about **440** / month. With today’s close rate, the queue clears around **month 3** with no new agents.
-
-### 2. One agent screen (includes same-day bill post)
-
-One view: account, latest read, bill, and case. Finish without transferring. Same-day bill write so the correction does not wait for the nightly file.
-
-Same-day posting alone removes about **37** cases and does not clear the backlog. Combined with the bill gate, the queue clears around **month 2**.
-
-## Hire path (not preferred)
-
-Clearing in 12 months while bad bills keep arriving takes about **3.4** agents and about **$155k** / year. The cause remains.
-
-## Run the dashboard
+## Run
 
 ```bash
 python3 -m http.server 8765
-# open http://127.0.0.1:8765/dashboard/index.html
+# http://127.0.0.1:8765/dashboard/index.html
 ```
 
-Optional rebuild of `dashboard/data.js`:
+Rebuild `dashboard/data.js` from the CSVs:
 
 ```bash
 python3 -m venv .venv
@@ -47,9 +36,4 @@ python3 -m venv .venv
 .venv/bin/python dashboard/build_data.py
 ```
 
-## Layout
-
-| Path | Contents |
-| --- | --- |
-| `dashboard/` | Live briefing |
-| `Northwind_Challenge_Data/` | Six synthetic challenge CSVs |
+`dashboard/` is the briefing. `Northwind_Challenge_Data/` holds the six synthetic CSVs.
