@@ -1,0 +1,11 @@
+item,unit_cost,unit,source_note
+Inbound call handled by agent,7.4,per call,Finance cost model FY26
+Complaint handled end to end (average),68.0,per complaint,"Finance cost model FY26, fully loaded"
+Complaint handled end to end (transferred between systems),121.0,per complaint,Finance cost model FY26
+Manual bill correction and re-issue,34.0,per correction,Finance cost model FY26
+Field meter visit,92.0,per visit,"Operations, FY26 actuals"
+Smart meter installation,148.0,per meter,"SYS-07 rollout actuals, Ashford"
+"Contact centre agent, fully loaded",46000.0,per FTE per year,"HR, FY26"
+AskNorthwind assistant pilot,640000.0,per year,"SYS-15 vendor contract, 2025"
+"Regulator penalty, enhanced monitoring",2400000.0,per quarter in breach,Regulatory Affairs estimate
+"Compensation payment, missed appointment or outage",40.0,per case,Regulated standard

@@ -1,0 +1,16 @@
+system_id,system_name,purpose,year_installed,vendor,tech_stack,records_held,integration_method,annual_run_cost,owning_function,notes
+SYS-01,Aurora Billing,Customer billing and invoicing,1998,In-house,COBOL / DB2 on mainframe,1900000,Nightly batch file,4100000,Finance IT,Serves Barrowdale and Dunmoor only. Two remaining developers understand the rating engine.
+SYS-02,Helix CIS,Customer information system,2004,Helix Systems,Oracle Forms / Oracle 11g,1800000,Nightly batch file,3250000,Customer Ops IT,System of record for account data. Vendor support ends in 18 months.
+SYS-03,Northwind Connect,Customer web and app self-service,2019,In-house,React / Node / Postgres,640000,REST API,1450000,Digital,Only 34% of customers registered. Cannot display a bill breakdown.
+SYS-04,CaseTrack,Complaint and case management,2011,CaseTrack Ltd,Java / SQL Server,410000,Nightly batch file,980000,Customer Ops IT,Cases transferred in from other channels lose their history.
+SYS-05,CallCentre One,Contact centre telephony and CRM,2015,Vonovia,SaaS,0,REST API,2200000,Customer Ops,Agents run four systems side by side to answer one call.
+SYS-06,MeterHub,Meter read collection and validation,2009,In-house,C# / SQL Server,22000000,Nightly batch file,1700000,Metering,Estimation algorithm unchanged since 2012. No feedback loop from corrected bills.
+SYS-07,SmartRead Gateway,Smart meter data ingestion,2021,Itron,Kafka / Cassandra,310000000,Streaming,2600000,Metering,"Live in Ashford, Eastmarch, Calderfield and Fenwick only. Barrowdale and Dunmoor rollout deferred twice on cost."
+SYS-08,FieldForce,Field engineer scheduling and dispatch,2013,ServiceMax,SaaS,0,REST API,1350000,Operations,No link to CaseTrack. Engineers arrive without the complaint history.
+SYS-09,GridWatch,Network outage and asset monitoring,2016,Schneider,On-prem appliance,0,Message queue,3800000,Network,Outage data is not used to suppress related billing chasers.
+SYS-10,AquaTrack,Water network and leakage management,2007,In-house,VB.NET / SQL Server,4200000,Manual export,890000,Water Ops,Acquired with the 2007 water business. Never integrated.
+SYS-11,Ledger Core,General ledger and finance,2012,SAP,SAP ECC,0,Batch interface,5400000,Finance,ECC end of support is a board-level programme already underway.
+SYS-12,PeopleBase,HR and workforce management,2017,Workday,SaaS,0,REST API,1100000,HR,Out of scope for this engagement.
+SYS-13,RegReport,Regulatory reporting,2010,In-house,MS Access / Excel / SQL,0,Manual export,240000,Regulatory Affairs,Quarterly regulator submission is assembled by hand over nine working days.
+SYS-14,DocVault,Customer document and correspondence archive,2005,OpenText,On-prem,38000000,Manual export,760000,Customer Ops,Retrieval takes 2-4 minutes per document during a call.
+SYS-15,AskNorthwind (pilot),"AI virtual assistant, 2025 pilot",2025,Convo.ai,SaaS LLM assistant,0,REST API,640000,Digital,"Nine-month pilot, Jan-Sep 2025. Paused. Results in northwind_ai_pilot_2025.csv."

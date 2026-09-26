@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Northwind · Complaint recovery</title>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --surface: #ffffff;
+    --ink: #0f1115;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --line-soft: #f0f1f3;
+    --accent: #2563eb;
+    --accent-soft: #eff4ff;
+    --track: #eef0f3;
+    --quiet-bar: #c4c9d1;
+    --radius: 10px;
+    --radius-sm: 8px;
+    --focus: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background: var(--bg);
+    font: 400 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app {
+    width: min(1040px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 0 0 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    height: 52px;
+    margin: 0;
+    padding: 0 4px;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(10px);
+    z-index: 2;
+  }
+  .brand {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .brand span { color: var(--muted); font-weight: 400; }
+  .asof { margin: 0; color: var(--muted); font-size: 13px; }
+  .hero { margin: 0; }
+  h1 {
+    margin: 0 0 6px;
+    font-size: clamp(22px, 2.4vw, 26px);
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+  }
+  .lede { margin: 0; max-width: 58ch; color: var(--muted); font-size: 14px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin: 0;
+    min-width: 0;
+  }
+  .card-title {
+    margin: 0 0 2px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .card-note {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 13px;
+    max-width: 68ch;
+  }
+  .ruler-wrap { margin: 0; }
+  .ruler-wrap .card-note { margin-bottom: 0; }
+  .ruler {
+    display: grid;
+    grid-template-columns: repeat(28, 1fr);
+    gap: 2px;
+    height: 16px;
+    margin: 16px 0;
+  }
+  .ruler i {
+    display: block;
+    border-radius: 2px;
+    background: var(--track);
+    transform-origin: left center;
+  }
+  .ruler i.batch { background: var(--accent); }
+  .ruler-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-top: 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .ruler-key b { color: var(--ink); font-weight: 500; }
+  @media (prefers-reduced-motion: no-preference) {
+    .ruler i.batch { animation: mark 500ms ease-out both; }
+  }
+  @keyframes mark { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+    gap: 16px;
+    margin: 0;
+  }
+  .fact {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .fact b {
+    display: block;
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .fact .label {
+    display: block;
+    margin-top: 8px;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+  .fact .detail {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .split {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 16px;
+    margin: 0;
+  }
+  .row, .region {
+    display: grid;
+    gap: 8px;
+    align-items: center;
+    margin: 0 0 8px;
+    font-size: 13px;
+  }
+  .row { grid-template-columns: minmax(0, 148px) 1fr 34px; }
+  .region { grid-template-columns: minmax(0, 118px) 1fr auto; }
+  .name { line-height: 1.25; color: var(--ink); }
+  .track {
+    height: 8px;
+    background: var(--track);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .track i {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+    background: var(--quiet-bar);
+  }
+  .track i.meter { background: var(--accent); }
+  .track i.legacy {
+    background-color: var(--accent);
+    background-image: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,.45) 2px,
+      rgba(255,255,255,.45) 4px
+    );
+  }
+  .count {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .forecast { margin: 0; min-width: 0; }
+  .scenario-head { margin-bottom: 12px; }
+  .scenario-head h2 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+  }
+  .presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    max-width: 100%;
+    padding: 3px;
+    margin: 0 0 16px;
+    background: var(--line-soft);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+  }
+  button.preset {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    border-radius: 6px;
+    padding: 7px 11px;
+    font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  button.preset:hover { color: var(--ink); }
+  button.preset.active {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 0 0 1px var(--line);
+  }
+  button.preset:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 20px;
+    margin-bottom: 8px;
+  }
+  .controls .pace { grid-column: 1 / -1; }
+  label.slider {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  label.slider input {
+    width: 100%;
+    margin: 10px 0 6px;
+    accent-color: var(--accent);
+  }
+  label.slider span {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 400;
+  }
+  .chart-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0 4px;
+  }
+  .legend {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .swatch {
+    display: inline-block;
+    width: 16px;
+    height: 0;
+    border-top: 2px solid #9ca3af;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+  .swatch.solid { border-top: 2.5px solid var(--accent); }
+  .swatch.dashed { border-top-style: dashed; }
+  svg.chart, svg.slope { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif; }
+  .chart-scroll, .table-scroll { max-width: 100%; overflow-x: auto; }
+  svg.chart { width: 100%; height: auto; min-height: 200px; display: block; }
+  .chart-desc { margin: 4px 0 10px; color: var(--muted); font-size: 12px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: right;
+    padding: 8px 10px;
+    border-top: 1px solid var(--line-soft);
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 500; }
+  caption {
+    caption-side: bottom;
+    text-align: left;
+    padding-top: 8px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .resources {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+    gap: 16px 20px;
+    margin-top: 4px;
+  }
+  .resource b {
+    display: block;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+  .resource .label {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .resource .detail {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .lower {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: 16px;
+    margin: 0;
+  }
+  svg.slope { width: 100%; height: auto; display: block; }
+  .assumptions {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .assumptions li { margin: 0 0 8px; max-width: 58ch; }
+  .assumptions li:last-child { margin-bottom: 0; }
+  @media (max-width: 720px) {
+    .app { width: min(100% - 28px, 1040px); gap: 16px; }
+    .topbar { position: static; height: auto; padding: 12px 0; }
+    .row, .region { grid-template-columns: 1fr auto; }
+    .row .track, .region .track { grid-column: 1 / -1; }
+    .presets { width: 100%; }
+    button.preset { white-space: normal; }
+    .ruler { gap: 1px; margin: 16px 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <p class="brand">Northwind <span>/ Complaint recovery</span></p>
+      <p class="asof">30 Sep 2026</p>
+    </header>
+
+    <section class="hero">
+      <h1>The nightly file is one day. The queue is twenty-eight.</h1>
+      <p class="lede" id="lede"></p>
+    </section>
+
+    <section class="card ruler-wrap">
+      <p class="card-title">A typical bill correction takes 28 days</p>
+      <p class="card-note">Each block is one day. Only the first day is the nightly billing file. The other 27 days the complaint is waiting, or being passed to another system.</p>
+      <div class="ruler" id="ruler" role="img" aria-label="Twenty-eight days. Day 1 is the nightly billing file. Days 2 to 28 are waiting and handoffs."></div>
+      <div class="ruler-key">
+        <span><b>Day 1, blue.</b> Aurora, Helix, CaseTrack, and MeterHub update overnight, so the corrected bill cannot appear sooner than this.</span>
+        <span><b>Days 2–28, grey.</b> Queue time. This is why posting the bill instantly does not clear the backlog.</span>
+      </div>
+    </section>
+
+    <section class="facts" id="facts" aria-label="Position"></section>
+
+    <section class="split">
+      <div class="card">
+        <p class="card-title">Meter-driven cases are the backlog</p>
+        <p class="card-note">How many complaints are still open, longest bar first. Blue is a bill or meter problem. Grey is everything else. The number is the count.</p>
+        <div id="categories"></div>
+      </div>
+      <div class="card">
+        <p class="card-title">Bad estimates are where the complaints start</p>
+        <p class="card-note">Bar length is the share of meter reads that were estimated, not taken. A hatched bar means that region has no smart meters. The figure on the right is billing complaints per 1,000 accounts a year.</p>
+        <div id="regions"></div>
+      </div>
+    </section>
+
+    <section class="card forecast">
+      <div class="scenario-head">
+        <h2 id="scenario-title">Left alone, the queue is still growing in month 12.</h2>
+        <p class="card-note" id="scenario-note" style="margin-bottom:0"></p>
+      </div>
+      <div class="presets" id="presets" role="group" aria-label="Recovery path"></div>
+      <div class="controls">
+        <label class="slider" for="prevent">Meter-driven complaints prevented
+          <input id="prevent" type="range" min="0" max="100" value="0" step="1">
+          <span id="prevent-label"></span>
+        </label>
+        <label class="slider" for="lift">Extra closes from finishing on the same contact
+          <input id="lift" type="range" min="0" max="40" value="0" step="1">
+          <span id="lift-label"></span>
+        </label>
+        <label class="slider pace" for="pace">Pace, in months to clear the queue
+          <input id="pace" type="range" min="0" max="12" value="0" step="1">
+          <span id="pace-label"></span>
+        </label>
+      </div>
+      <div class="chart-head">
+        <div class="legend">
+          <span><i class="swatch dashed"></i>Current path</span>
+          <span><i class="swatch solid"></i>Selected path</span>
+        </div>
+      </div>
+      <svg class="chart" id="chart" viewBox="0 0 720 230" role="img" aria-labelledby="chart-desc"></svg>
+      <p id="chart-desc" class="chart-desc"></p>
+      <div class="table-scroll">
+      <table id="path-table">
+        <caption>Open complaints. The dashed series is what happens if nothing changes.</caption>
+      </table>
+      </div>
+    </section>
+
+    <section class="card" id="resources">
+      <p class="card-title" id="resource-title">What this path takes</p>
+      <p class="card-note" id="resource-note"></p>
+      <div class="resources" id="resource-grid"></div>
+    </section>
+
+    <section class="lower">
+      <div class="card">
+        <p class="card-title">The assistant made the call worse</p>
+        <p class="card-note">AskNorthwind, Jan–Sep 2025. Nine months, $480,000. It could not correct a bill.</p>
+        <svg class="slope" id="slope" viewBox="0 0 520 170" role="img" aria-label="From January to September 2025, containment fell from 16 percent to 10 percent, satisfaction fell from 2.6 to 2.04, and complaints after a session rose from 11 percent to 14 percent."></svg>
+      </div>
+      <div class="card">
+        <p class="card-title">What this count assumes</p>
+        <ul class="assumptions">
+          <li>The cost file does not name a currency. Every dollar figure on this page is the file's number, treated as Canadian dollars.</li>
+          <li>Inflow and closes stay at the April–September 2026 average unless a control moves them: 1,185 opened and 1,129 closed.</li>
+          <li>Finishing without a transfer is priced from the cost file, $68 against $121. That premium is 21% of handling effort, and it becomes extra closes only if the slider says so.</li>
+          <li>An instant bill post trims about 37 cases, one day of throughput. It does not raise the monthly close rate.</li>
+          <li>The regulator score moved with days to close, about 5.32 − 0.069 × days. A score of 4.0 sat near 19 days. That describes the last two years, not the next one.</li>
+          <li>There is no agent headcount. Pace converts extra closes into people at $46,000 a year and $68 a complaint. Last year's 617,765 calls, at $7.40, equal about 99 agents of call time. That is an equivalent, not a roster, and the call cost may already include the same people who handle complaints.</li>
+          <li>A missing read still needs a visit. That part cannot post overnight.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+<script src="data.js"></script>
+<script>
+const D = window.NORTHWIND;
+const billingNames = new Set([
+  "Billing - disputed amount",
+  "Billing - estimated read",
+  "Metering - no read taken",
+]);
+const presets = [
+  { id: "current", label: "Do nothing", prevent: 0, lift: 0 },
+  { id: "batch_only", label: "Instant bill post", prevent: 0, lift: 0, batch: true },
+  { id: "same_contact", label: "Same contact", prevent: 0, lift: Math.round(D.capacity_lift_if_no_transfer * 100) },
+  { id: "prevent", label: "Stop meter complaints", prevent: 100, lift: 0 },
+  { id: "both", label: "Both", prevent: 100, lift: Math.round(D.capacity_lift_if_no_transfer * 100) },
+];
+
+const AGENT_YEAR = 46000;
+const COMPLAINT_COST = 68;
+const CLOSES_PER_AGENT_MONTH = (AGENT_YEAR / COMPLAINT_COST) / 12;
+const CALLS_LAST_YEAR = 617765;
+const CALL_FTE = CALLS_LAST_YEAR * 7.4 / AGENT_YEAR;
+
+function sim(preventPct, liftPct, batch, capacityOverride) {
+  const inflow = D.base_inflow * (1 - D.billing_share_recent * (preventPct / 100));
+  const capacity = capacityOverride == null ? D.base_capacity * (1 + liftPct / 100) : capacityOverride;
+  const start = batch ? D.open_backlog - D.one_day_queue_cases : D.open_backlog;
+  const path = [Math.round(start * 10) / 10];
+  let cleared = null;
+  let backlog = start;
+  for (let month = 1; month <= 12; month++) {
+    backlog = Math.max(0, backlog + inflow - capacity);
+    path.push(Math.round(backlog * 10) / 10);
+    if (cleared === null && backlog <= 0) cleared = month;
+  }
+  return { path, cleared, inflow, capacity, end: path[12] };
+}
+
+function fmt(n) {
+  return Math.round(n).toLocaleString("en-CA");
+}
+
+document.getElementById("lede").textContent =
+  `Of ${fmt(D.bill_correction_n)} bill corrections, ${fmt(D.bill_correction_within_1_day)} finished the day they were opened. The median is ${D.bill_correction_median_days} days.`;
+
+document.getElementById("ruler").innerHTML = Array.from({ length: 28 }, (_, i) =>
+  `<i class="${i === 0 ? "batch" : ""}" title="Day ${i + 1}${i === 0 ? ", nightly billing file" : ", waiting or handoff"}"></i>`
+).join("");
+
+document.getElementById("facts").innerHTML = [
+  [fmt(D.open_backlog), "Open complaints", "None were open in October 2024. This is two years of cases opened faster than they were closed."],
+  [Math.round(D.open_billing_share * 100) + "%", "Caused by the meter or the bill", "A disputed amount, an estimated read, or a meter that was never read. 1,095 of the 1,599."],
+  [Math.round(D.reopen_if_transferred * 100) + "%", "Reopened if the case was transferred", `Passed between systems. If it stayed in one system, ${Math.round(D.reopen_if_stayed * 100)}% were reopened.`],
+  [fmt(D.past_sla), "Already past the service target", "More than half of the complaints that are still open."],
+].map(([value, label, detail]) => `<div class="fact"><b>${value}</b><span class="label">${label}</span><span class="detail">${detail}</span></div>`).join("");
+
+const maxCat = D.categories[0].count;
+document.getElementById("categories").innerHTML = D.categories.map((row) => {
+  const meter = billingNames.has(row.name);
+  const width = Math.max(2, row.count / maxCat * 100);
+  return `<div class="row">
+    <span class="name">${row.name.replace(" - ", ", ")}</span>
+    <div class="track" role="img" aria-label="${row.name}, ${row.count} open${meter ? ", meter-driven" : ""}"><i class="${meter ? "meter" : ""}" style="width:${width}%"></i></div>
+    <span class="count">${row.count}</span>
+  </div>`;
+}).join("");
+
+document.getElementById("regions").innerHTML = D.regions.map((row) => {
+  const width = Math.max(4, row.estimated_read_rate / 0.7 * 100);
+  const kind = row.legacy ? "legacy" : "";
+  return `<div class="region">
+    <span class="name">${row.region}${row.legacy ? " · no smart meters" : ""}</span>
+    <div class="track" role="img" aria-label="${row.region}, ${Math.round(row.estimated_read_rate * 100)} percent of reads estimated, ${row.billing_complaints_per_1k_year} billing complaints per 1,000 accounts a year"><i class="${kind}" style="width:${width}%"></i></div>
+    <span class="count">${Math.round(row.estimated_read_rate * 100)}% estimated<br>${row.billing_complaints_per_1k_year} per 1,000</span>
+  </div>`;
+}).join("");
+
+const start = D.pilot[0];
+const end = D.pilot[D.pilot.length - 1];
+const slopes = [
+  ["Contained", start.containment, end.containment, Math.round(start.containment * 100) + "%", Math.round(end.containment * 100) + "%"],
+  ["Satisfaction / 5", start.csat / 5, end.csat / 5, start.csat.toFixed(2), end.csat.toFixed(2)],
+  ["Complaint after", start.complaint_after, end.complaint_after, Math.round(start.complaint_after * 100) + "%", Math.round(end.complaint_after * 100) + "%"],
+];
+function slopeY(v) { return 28 + (1 - v) * 108; }
+function spreadLabels(points, minGap) {
+  const sorted = points.map((p, i) => ({ ...p, i })).sort((a, b) => a.y - b.y);
+  for (let n = 0; n < 8; n++) {
+    for (let k = 1; k < sorted.length; k++) {
+      if (sorted[k].y - sorted[k - 1].y < minGap) {
+        const mid = (sorted[k].y + sorted[k - 1].y) / 2;
+        sorted[k - 1].y = mid - minGap / 2;
+        sorted[k].y = mid + minGap / 2;
+      }
+    }
+  }
+  const byIndex = [];
+  sorted.forEach((p) => { byIndex[p.i] = p.y; });
+  return byIndex;
+}
+const leftYs = spreadLabels(slopes.map(([, a]) => ({ y: slopeY(a) })), 16);
+const rightYs = spreadLabels(slopes.map(([, , b]) => ({ y: slopeY(b) })), 16);
+document.getElementById("slope").innerHTML = `
+  <text x="8" y="14" font-size="11" fill="#6b7280">Jan 2025</text>
+  <text x="512" y="14" font-size="11" fill="#6b7280" text-anchor="end">Sep 2025</text>
+  ${slopes.map(([label, a, b, startLabel, endLabel], i) => {
+    const ya = slopeY(a);
+    const yb = slopeY(b);
+    const labelYa = leftYs[i];
+    const labelYb = rightYs[i];
+    return `<line x1="156" y1="${ya}" x2="352" y2="${yb}" stroke="#2563eb" stroke-width="1.75"/>
+      <circle cx="156" cy="${ya}" r="3" fill="#2563eb"/>
+      <circle cx="352" cy="${yb}" r="3" fill="#2563eb"/>
+      <text x="148" y="${labelYa + 4}" text-anchor="end" font-size="11" fill="#0f1115">${label} ${startLabel}</text>
+      <text x="360" y="${labelYb + 4}" font-size="11" fill="#0f1115">${endLabel}</text>`;
+  }).join("")}`;
+
+const presetBox = document.getElementById("presets");
+presetBox.innerHTML = presets.map((preset) =>
+  `<button class="preset" type="button" data-id="${preset.id}">${preset.label}</button>`
+).join("");
+
+const preventInput = document.getElementById("prevent");
+const liftInput = document.getElementById("lift");
+const paceInput = document.getElementById("pace");
+let active = "current";
+
+function pacePlan(inflow, liftPct) {
+  const months = Number(paceInput.value);
+  const organic = D.base_capacity * (1 + liftPct / 100);
+  if (!months) {
+    return { months: 0, capacity: organic, forced: false };
+  }
+  const required = inflow + D.open_backlog / months;
+  return {
+    months,
+    capacity: Math.max(organic, required),
+    required,
+    forced: required > organic + 0.5,
+  };
+}
+
+function draw(result) {
+  const current = sim(0, 0, false).path;
+  const selected = result.path;
+  const max = Math.max(...current, ...selected, 100);
+  const w = 720, h = 230, left = 48, right = 56, top = 14, bottom = 26;
+  const x = (i) => left + i / 12 * (w - left - right);
+  const y = (v) => top + (1 - v / max) * (h - top - bottom);
+  const line = (path) => path.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const ticks = [0, 3, 6, 9, 12].map((month) =>
+    `<text x="${x(month)}" y="${h - 6}" text-anchor="middle" font-size="11" fill="#6b7280">${month === 0 ? "Now" : month}</text>`
+  ).join("");
+  const yTicks = [0, max / 2, max].map((value) =>
+    `<text x="${left - 8}" y="${y(value) + 3}" text-anchor="end" font-size="11" fill="#6b7280">${fmt(value)}</text>
+     <line x1="${left}" y1="${y(value)}" x2="${w - right}" y2="${y(value)}" stroke="#f0f1f3"/>`
+  ).join("");
+  document.getElementById("chart").innerHTML =
+    yTicks +
+    `<line x1="${left}" y1="${y(0)}" x2="${w - right}" y2="${y(0)}" stroke="#e5e7eb" stroke-width="1"/>` +
+    `<path d="${line(current)}" fill="none" stroke="#9ca3af" stroke-width="1.75" stroke-dasharray="5 4"/>` +
+    `<path d="${line(selected)}" fill="none" stroke="#2563eb" stroke-width="2.25"/>` +
+    `<text x="${x(12) + 6}" y="${y(current[12]) + 3}" font-size="11" fill="#6b7280">${fmt(current[12])}</text>` +
+    `<text x="${x(12) + 6}" y="${Math.min(y(selected[12]) + 14, h - 30)}" font-size="11" fill="#2563eb">${fmt(selected[12])}</text>` +
+    ticks;
+  const marks = [0, 3, 6, 9, 12];
+  document.getElementById("path-table").innerHTML =
+    `<thead><tr><th>Month</th>${marks.map((m) => `<th>${m === 0 ? "Now" : m}</th>`).join("")}</tr></thead>
+     <tbody>
+       <tr><td>Current path</td>${marks.map((m) => `<td>${fmt(current[m])}</td>`).join("")}</tr>
+       <tr><td>Selected path</td>${marks.map((m) => `<td>${fmt(selected[m])}</td>`).join("")}</tr>
+     </tbody>
+     <caption>Open complaints. The dashed series is what happens if nothing changes.</caption>`;
+}
+
+function money(n) {
+  const v = Math.round(n);
+  const sign = v < 0 ? "−" : "";
+  const abs = Math.abs(v);
+  if (abs >= 1e6) {
+    const m = abs / 1e6;
+    return sign + "$" + (m >= 10 ? m.toFixed(0) : m.toFixed(1)) + "m";
+  }
+  return sign + "$" + abs.toLocaleString("en-CA");
+}
+
+function resourceTiles(result, plan) {
+  const organic = D.base_capacity * (1 + Number(liftInput.value) / 100);
+  const hireMonthly = Math.max(0, result.capacity - organic);
+  const hireFte = hireMonthly / CLOSES_PER_AGENT_MONTH;
+  const permanentMonthly = Math.max(0, result.inflow - organic);
+  const permanentFte = Math.min(hireFte, permanentMonthly / CLOSES_PER_AGENT_MONTH);
+  const temporaryFte = Math.max(0, hireFte - permanentFte);
+  const surgeCost = hireFte * AGENT_YEAR * ((plan.months || 0) / 12);
+  const permanentCost = permanentFte * AGENT_YEAR;
+  const share = hireFte / CALL_FTE;
+  const noRoster = `No headcount is in the files. ${fmt(CALLS_LAST_YEAR)} calls last year, at $7.40, is about ${Math.round(CALL_FTE)} agents of call time. One agent costs $46,000 and covers about ${Math.round(AGENT_YEAR / COMPLAINT_COST)} complaints a year.`;
+
+  let peopleValue = "None";
+  let peopleDetail = result.cleared
+    ? `Today's close rate already beats the inflow on these levers. The queue clears in month ${result.cleared} without a hire.`
+    : "These levers do not add closes. The queue is still growing, and no one new is being hired.";
+  if (hireFte >= 0.05) {
+    peopleValue = hireFte.toFixed(1);
+    const scale = share < 0.15
+      ? `That is ${Math.round(share * 100)}% of a year of call time, so the hire itself is small.`
+      : `That is ${Math.round(share * 100)}% of a year of call time. This is a surge, not a normal hire.`;
+    const split = permanentFte >= 0.05
+      ? ` ${permanentFte.toFixed(1)} stay after the queue is gone, because new complaints would still outrun today's team. ${temporaryFte.toFixed(1)} can leave once it is clear.`
+      : " None of them are needed once the queue is gone.";
+    peopleDetail = scale + split;
+  }
+
+  const costValue = hireFte < 0.05 ? "$0" : money(plan.months ? surgeCost : permanentCost);
+  const costDetail = hireFte < 0.05
+    ? "No added salary. Fixing the estimator has no price in the cost file. Smart meters for Barrowdale and Dunmoor would be $77m, and that rollout was deferred twice."
+    : `${money(surgeCost)} over ${plan.months} ${plan.months === 1 ? "month" : "months"} at $46,000 a year.` + (permanentFte >= 0.05 ? ` After that, ${money(permanentCost)} a year if the extra complaints keep arriving.` : " Nothing further once the queue is gone.");
+
+  return {
+    title: hireFte < 0.05 ? "This pace does not need extra agents" : "This pace is a hire on top of today's team",
+    note: noRoster,
+    items: [
+      [peopleValue, "Agents to add", peopleDetail],
+      [costValue, plan.months ? "Cost until the queue is gone" : "Added salary", costDetail],
+      [result.cleared ? `Month ${result.cleared}` : "Not in 12 months", "Queue hits zero", result.cleared
+        ? `${fmt(result.capacity)} closes a month against ${fmt(result.inflow)} new complaints.`
+        : `${fmt(result.end)} would still be open. Raise the pace, or stop more of the meter complaints.`],
+    ],
+  };
+}
+
+function render() {
+  const preset = presets.find((item) => item.id === active);
+  const batch = Boolean(preset && preset.batch && Number(preventInput.value) === preset.prevent && Number(liftInput.value) === preset.lift);
+  const inflowPreview = D.base_inflow * (1 - D.billing_share_recent * (Number(preventInput.value) / 100));
+  const plan = pacePlan(inflowPreview, Number(liftInput.value));
+  const result = sim(Number(preventInput.value), Number(liftInput.value), batch, plan.forced ? plan.capacity : null);
+  document.getElementById("prevent-label").textContent =
+    `${preventInput.value}% of that stream stopped · inflow ${fmt(result.inflow)} / month`;
+  document.getElementById("lift-label").textContent =
+    `${liftInput.value}% more closes from the same team · ${fmt(D.base_capacity * (1 + Number(liftInput.value) / 100))} / month · the cost file supports 21% if transfers stop`;
+  document.getElementById("pace-label").textContent = plan.months
+    ? `Clear in ${plan.months} ${plan.months === 1 ? "month" : "months"} · ${fmt(plan.capacity)} closes a month` + (plan.forced ? " · the gap above today's team is a hire" : " · today's team already beats this pace")
+    : "No added pace. The chart uses only the two levers above.";
+
+  const copy = {
+    current: [
+      "Do nothing leaves inflow and closes exactly as they are.",
+      "About 1,185 complaints open each month and 1,129 are closed. No system change and no extra people. The queue is still growing in month 12.",
+    ],
+    batch_only: [
+      "Instant bill post means the corrected bill appears the same day.",
+      "Aurora, Helix, CaseTrack, and MeterHub update overnight. This option removes that one-day wait. It does not hire anyone, and it does not stop the next bad bill. About 37 cases come off the queue, then it grows again.",
+    ],
+    same_contact: [
+      "Same contact means the agent finishes the case without sending it elsewhere.",
+      `A transferred complaint costs $121 and takes ${D.days_if_transferred} days. One that stays in the first system costs $68 and takes ${D.days_if_stayed} days. This option turns that gap into time the team already has, about five agents, and hires no one. The queue clears in month 9 only if that time becomes extra closes.`,
+    ],
+    prevent: [
+      "Stop meter complaints means those bills are no longer raised.",
+      "Disputed bills, estimated reads, and missed reads are 63% of new complaints. This option stops that inflow and keeps today's team, so the queue clears in month 3. It is not the $77m smart-meter rollout.",
+    ],
+    both: [
+      "Both means finish the case in one system, and stop the bad bills arriving.",
+      "Same-contact handling shortens the complaint already open. Stopping estimated and missed reads stops the next one. No new agents. The queue clears in month 2. A missing read still needs a visit.",
+    ],
+  };
+  let title;
+  let note;
+  if (plan.months && plan.forced) {
+    title = `Clear the queue in ${plan.months} ${plan.months === 1 ? "month" : "months"}.`;
+    note = `That pace is faster than the levers alone, so the people and cost below are the hire required to hold it.`;
+  } else if (copy[active]) {
+    [title, note] = copy[active];
+  } else if (result.cleared) {
+    title = `On these settings the queue clears in month ${result.cleared}.`;
+    note = `Inflow would be ${fmt(result.inflow)} a month. Close capacity would be ${fmt(result.capacity)}.`;
+  } else {
+    title = `On these settings ${fmt(result.end)} cases are still open in month 12.`;
+    note = `Inflow would be ${fmt(result.inflow)} a month, against close capacity of ${fmt(result.capacity)}.`;
+  }
+  document.getElementById("scenario-title").textContent = title;
+  document.getElementById("scenario-note").textContent = note;
+  const resources = resourceTiles(result, plan);
+  document.getElementById("resource-title").textContent = resources.title;
+  document.getElementById("resource-note").textContent = resources.note;
+  document.getElementById("resource-grid").innerHTML = resources.items.map(([value, label, detail]) =>
+    `<div class="resource"><b>${value}</b><span class="label">${label}</span><span class="detail">${detail}</span></div>`
+  ).join("");
+  document.getElementById("chart-desc").textContent =
+    `Open complaints through month 12. Vertical scale starts at zero. ${batch ? "Selected path starts 37 cases lower, then climbs with the current path." : "Solid line is the selected path. Dashed line is current."}`;
+  draw(result);
+  document.querySelectorAll(".preset").forEach((button) => {
+    button.classList.toggle("active", button.dataset.id === active);
+    button.setAttribute("aria-pressed", button.dataset.id === active ? "true" : "false");
+  });
+}
+
+presetBox.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  active = button.dataset.id;
+  const preset = presets.find((item) => item.id === active);
+  preventInput.value = preset.prevent;
+  liftInput.value = preset.lift;
+  render();
+});
+preventInput.addEventListener("input", () => { active = "custom"; render(); });
+liftInput.addEventListener("input", () => { active = "custom"; render(); });
+paceInput.addEventListener("input", () => { render(); });
+render();
+</script>
+</body>
+</html>
