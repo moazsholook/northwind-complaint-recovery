@@ -5,3 +5,5 @@ __pycache__/
 dashboard/verify/
 *.log
 .cursor/
+.env
+

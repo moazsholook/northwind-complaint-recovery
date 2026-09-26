@@ -27,7 +27,7 @@ Hiring through the gap is about **3.4** agents and **$155k** a year. The cause s
 ## Run
 
 ```bash
-python3 -m http.server 8765
+python3 server.py
 # http://127.0.0.1:8765/dashboard/index.html
 # http://127.0.0.1:8765/builds/index.html
 ```

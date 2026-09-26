@@ -22,7 +22,7 @@
     font: 400 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   }
   .app {
-    width: min(1040px, calc(100% - 32px));
+    width: min(1100px, calc(100% - 32px));
     margin: 0 auto;
     padding: 0 0 40px;
     display: flex;
@@ -41,7 +41,7 @@
   h1 { margin: 0; font-size: 16px; font-weight: 500; }
   .layout {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
     gap: 16px;
   }
   .card {
@@ -51,41 +51,53 @@
     padding: 16px 18px;
     min-width: 0;
   }
-  h2 { margin: 0 0 12px; font-size: 14px; font-weight: 500; }
-  dl { display: grid; grid-template-columns: 120px 1fr; gap: 6px 12px; margin: 0; font-size: 13px; }
+  h2 { margin: 0 0 10px; font-size: 14px; font-weight: 500; }
+  .queue { display: flex; flex-direction: column; gap: 8px; }
+  .case {
+    text-align: left;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+  }
+  .case.active { border-color: var(--accent); background: var(--soft); }
+  .case b { display: block; font-weight: 500; }
+  .case span { color: var(--muted); font-size: 12px; }
+  dl { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; margin: 0; font-size: 13px; }
   dt { color: var(--muted); }
   dd { margin: 0; }
-  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-  button {
+  .actions, .key-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  button, input[type="number"] {
     border: 1px solid var(--line);
     background: #fff;
     border-radius: 8px;
     padding: 8px 12px;
     font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-    cursor: pointer;
   }
+  input[type="number"] { width: 140px; font-weight: 400; }
+  button { cursor: pointer; }
   button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   textarea {
     width: 100%;
-    min-height: 72px;
+    min-height: 64px;
     border: 1px solid var(--line);
     border-radius: 8px;
     padding: 10px;
     font: inherit;
     resize: vertical;
   }
-  .note { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
-  #result {
-    margin-top: 12px;
-    padding: 10px 12px;
-    background: var(--soft);
-    border-radius: 8px;
-    font-size: 13px;
-    display: none;
+  .note, .status { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+  .bill { display: flex; gap: 16px; margin-top: 12px; }
+  .bill div { flex: 1; background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+  .bill b { display: block; font-size: 20px; font-weight: 500; }
+  #result { margin-top: 12px; padding: 10px 12px; background: var(--soft); border-radius: 8px; font-size: 13px; display: none; }
+  @media (max-width: 800px) {
+    .layout { grid-template-columns: 1fr; }
   }
-  .gate { margin-top: 12px; font-size: 13px; }
-  .held { color: var(--accent); font-weight: 500; }
 </style>
 </head>
 <body>
@@ -94,61 +106,165 @@
       <h1>Northwind / Agent screen</h1>
       <a href="../dashboard/index.html">Dashboard</a>
     </header>
-
     <div class="layout">
       <section class="card">
-        <h2>Open case</h2>
-        <dl>
-          <dt>Account</dt><dd>ACC-830825 · Barrowdale</dd>
-          <dt>Complaint</dt><dd>Billing, disputed amount</dd>
-          <dt>Last real read</dt><dd>412 kWh</dd>
-          <dt>Estimate used</dt><dd>690 kWh</dd>
-          <dt>Bill</dt><dd>$186.40, not yet corrected</dd>
-          <dt>Systems</dt><dd>MeterHub, Aurora, CaseTrack</dd>
-        </dl>
-        <p class="gate" id="gate">Estimate is far from the last real read. The bill gate would hold this before the customer sees it.</p>
-        <div class="actions">
-          <button class="primary" type="button" id="correct">Correct bill today</button>
-          <button type="button" id="hold">Hold bill</button>
-          <button type="button" id="close">Close without transfer</button>
-        </div>
-        <p class="note" id="case-note">Same-day post writes the correction now. It does not wait for the nightly file.</p>
+        <h2>Backlog</h2>
+        <div class="queue" id="queue"></div>
       </section>
-
-      <section class="card">
-        <h2>Agent for the agent</h2>
-        <p class="note">Runs the screen actions for the person on the call. Not connected. Needs an API key.</p>
-        <textarea id="ask" placeholder="Correct this bill and close the case"></textarea>
-        <div class="actions">
-          <button class="primary" type="button" id="run">Run</button>
-        </div>
-        <div id="result" role="status"></div>
-      </section>
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <section class="card">
+          <h2 id="case-title">Case</h2>
+          <dl id="facts"></dl>
+          <div class="actions">
+            <label>Dial read <input id="dial" type="number" min="0" step="1"></label>
+            <button class="primary" type="button" id="correct">Correct with BatchHatch</button>
+            <button type="button" id="hold">Hold bill</button>
+            <button type="button" id="close">Close without transfer</button>
+          </div>
+          <div class="bill" id="bill" hidden>
+            <div><span class="status">Estimated bill</span><b id="old-bill"></b></div>
+            <div><span class="status">Corrected bill</span><b id="new-bill"></b></div>
+          </div>
+          <p class="note" id="case-note"></p>
+        </section>
+        <section class="card">
+          <h2>Agent for the agent</h2>
+          <p class="status" id="key-status">Checking the server key.</p>
+          <textarea id="ask" placeholder="Correct Margaret Holloway from her dial read and close the case"></textarea>
+          <div class="actions">
+            <button class="primary" type="button" id="run">Run</button>
+          </div>
+          <div id="result" role="status"></div>
+        </section>
+      </div>
     </div>
   </div>
+<script src="engine.js"></script>
 <script>
+const B = window.NORTHWIND_BUILDS;
+const accounts = B.ACCOUNTS.map((row) => ({ ...row }));
+let selected = accounts[0].id;
+
+const queue = document.getElementById("queue");
+const facts = document.getElementById("facts");
+const dial = document.getElementById("dial");
 const note = document.getElementById("case-note");
-const gate = document.getElementById("gate");
+const bill = document.getElementById("bill");
 const result = document.getElementById("result");
 
-function say(text) {
-  note.textContent = text;
+function money(n) { return "$" + Number(n).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function current() { return accounts.find((row) => row.id === selected); }
+
+function renderQueue() {
+  queue.innerHTML = accounts.map((row) => `
+    <button class="case ${row.id === selected ? "active" : ""}" type="button" data-id="${row.id}">
+      <b>${row.name}</b>
+      <span>${row.id} · ${row.region} · ${row.openDays} days · ${money(row.estimatedBill)}</span>
+    </button>`).join("");
+  queue.querySelectorAll(".case").forEach((button) => {
+    button.onclick = () => { selected = button.dataset.id; render(); };
+  });
 }
 
-document.getElementById("correct").onclick = () => {
-  say("Bill corrected to the last real read. Posted today. MeterHub gets the correction for the next estimate.");
-};
-document.getElementById("hold").onclick = () => {
-  gate.innerHTML = '<span class="held">Held.</span> This bill will not go to the customer until the estimate is checked.';
-};
+function renderFacts() {
+  const row = current();
+  document.getElementById("case-title").textContent = row.name;
+  const pairs = [
+    ["Account", row.id + " · " + row.region],
+    ["Address", row.address],
+    ["Status", row.status],
+    ["Last real read", row.previousRead.toLocaleString("en-CA")],
+    ["Estimate used", row.estimatedRead.toLocaleString("en-CA")],
+    ["Estimated bill", money(row.estimatedBill)],
+    ["Tariff", row.tariffCode],
+    ["Notes", row.notes],
+  ];
+  facts.innerHTML = pairs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  if (!dial.value) dial.value = row.suggestedRead;
+}
+
+function render() {
+  renderQueue();
+  renderFacts();
+}
+
+function applyRate(read) {
+  const row = current();
+  const rated = B.rateAccount(row, Number(read));
+  bill.hidden = false;
+  document.getElementById("old-bill").textContent = money(row.estimatedBill);
+  document.getElementById("new-bill").textContent = rated.exception ? "Rejected" : money(rated.total);
+  if (rated.exception) {
+    note.textContent = rated.exception;
+    return rated;
+  }
+  row.status = "Corrected today";
+  row.corrected = rated.total;
+  note.textContent = `BatchHatch rated ${rated.units.toLocaleString("en-CA")} kWh. Bill falls from ${money(row.estimatedBill)} to ${money(rated.total)}. Posted today. MeterHub gets this read.`;
+  renderQueue();
+  return rated;
+}
+
+document.getElementById("correct").onclick = () => applyRate(dial.value || current().suggestedRead);
+document.getElementById("hold").onclick = () => { note.textContent = "Bill held. It will not go to the customer until the estimate is checked."; };
 document.getElementById("close").onclick = () => {
-  say("Case closed in this view. It was not transferred.");
+  current().status = "Closed here";
+  note.textContent = "Case closed on this screen. It was not transferred.";
+  renderQueue();
 };
-document.getElementById("run").onclick = () => {
-  const ask = document.getElementById("ask").value.trim() || "Correct this bill and close the case";
+
+async function refreshKey() {
+  const status = document.getElementById("key-status");
+  try {
+    const res = await fetch("/api/health");
+    const data = await res.json();
+    status.textContent = data.key ? "Server key is loaded. The agent can run." : "No server key. Add OPENAI_API_KEY to .env and start server.py.";
+  } catch (err) {
+    status.textContent = "Start python3 server.py so the agent can use the key.";
+  }
+}
+
+document.getElementById("run").onclick = async () => {
+  const ask = document.getElementById("ask").value.trim() || "Correct the open case from the dial read and close it.";
   result.style.display = "block";
-  result.textContent = "No API key yet. When connected, the agent would do this for the call-centre agent: " + ask + ". Then it would correct the bill, write the read back to MeterHub, and close the case without a transfer.";
+  result.textContent = "Running.";
+  try {
+    const res = await fetch("/api/agent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: ask,
+        accountId: selected,
+        dialRead: Number(dial.value || current().suggestedRead),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Agent failed");
+    (data.actions || []).forEach((action) => {
+      if (action.type === "select" && accounts.some((row) => row.id === action.accountId)) {
+        selected = action.accountId;
+        dial.value = "";
+        render();
+      }
+      if (action.type === "rate") {
+        dial.value = action.read;
+        applyRate(action.read);
+      }
+      if (action.type === "hold") note.textContent = "Bill held. It will not go to the customer until the estimate is checked.";
+      if (action.type === "close") {
+        current().status = "Closed here";
+        note.textContent = "Case closed on this screen. It was not transferred.";
+        renderQueue();
+      }
+    });
+    result.textContent = data.reply;
+  } catch (err) {
+    result.textContent = err.message;
+  }
 };
+
+render();
+refreshKey();
 </script>
 </body>
 </html>
