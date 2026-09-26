@@ -4,7 +4,9 @@ CGI Challenge briefing for Northwind Utilities.
 
 **Plan:** [Hack the Hill III](https://app.notion.com/p/Hack-the-Hill-III-3e760cc75b7780b6a543c16996c597c1)
 
-**Repo:** [northwind-complaint-recovery](https://github.com/moazsholook/northwind-complaint-recovery)
+**Dashboard:** [dashboard/index.html](dashboard/index.html)
+
+**Builds:** [builds/index.html](builds/index.html)
 
 ## Problem
 
@@ -18,6 +20,7 @@ Not a new CRM. Not another chatbot. Not the **$77m** smart-meter rollout for Bar
 
 1. **Bill gate.** Hold a bill when the estimate is far from the last real read or correction. Write the correction back to MeterHub. Inflow falls to about **440** a month. The queue clears around **month 3**. No new agents.
 2. **One agent screen.** Show the account, read, bill, and case together so the case is not transferred. Include a same-day bill post. That post alone removes about **37** cases. With the gate, the queue clears around **month 2**.
+3. **Agent for the agent.** After the screen exists, an AI agent runs those actions for the call-centre agent. Not wired yet. It needs an API key.
 
 Hiring through the gap is about **3.4** agents and **$155k** a year. The cause stays.
 
@@ -26,6 +29,7 @@ Hiring through the gap is about **3.4** agents and **$155k** a year. The cause s
 ```bash
 python3 -m http.server 8765
 # http://127.0.0.1:8765/dashboard/index.html
+# http://127.0.0.1:8765/builds/index.html
 ```
 
 Rebuild `dashboard/data.js` from the CSVs:

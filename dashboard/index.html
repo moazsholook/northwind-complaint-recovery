@@ -368,22 +368,12 @@
   <div class="app">
     <header class="topbar">
       <p class="brand">Northwind <span>/ Complaint recovery</span></p>
-      <p class="asof">30 Sep 2026</p>
     </header>
 
-    <section class="hero">
-      <h1>The nightly file is one day. The queue is twenty-eight.</h1>
-      <p class="lede" id="lede"></p>
-    </section>
-
     <section class="card ruler-wrap">
-      <p class="card-title">A typical bill correction takes 28 days</p>
-      <p class="card-note">Each block is one day. Only the first day is the nightly billing file. The other 27 days the complaint is waiting, or being passed to another system.</p>
+      <p class="card-title">A bill correction takes 28 days</p>
+      <p class="card-note">Blue is the nightly file. Grey is waiting or a handoff.</p>
       <div class="ruler" id="ruler" role="img" aria-label="Twenty-eight days. Day 1 is the nightly billing file. Days 2 to 28 are waiting and handoffs."></div>
-      <div class="ruler-key">
-        <span><b>Day 1, blue.</b> Aurora, Helix, CaseTrack, and MeterHub update overnight, so the corrected bill cannot appear sooner than this.</span>
-        <span><b>Days 2–28, grey.</b> Queue time. This is why posting the bill instantly does not clear the backlog.</span>
-      </div>
     </section>
 
     <section class="facts" id="facts" aria-label="Position"></section>
@@ -391,12 +381,12 @@
     <section class="split">
       <div class="card">
         <p class="card-title">Meter-driven cases are the backlog</p>
-        <p class="card-note">How many complaints are still open, longest bar first. Blue is a bill or meter problem. Grey is everything else. The number is the count.</p>
+        <p class="card-note">Open complaints. Blue is a bill or meter problem. The number is the count.</p>
         <div id="categories"></div>
       </div>
       <div class="card">
         <p class="card-title">Bad estimates are where the complaints start</p>
-        <p class="card-note">Bar length is the share of meter reads that were estimated, not taken. A hatched bar means that region has no smart meters. The figure on the right is billing complaints per 1,000 accounts a year.</p>
+        <p class="card-note">Bar length is the estimated-read rate. Hatch means no smart meters. Right side is billing complaints per 1,000 accounts a year.</p>
         <div id="regions"></div>
       </div>
     </section>
@@ -445,19 +435,17 @@
     <section class="lower">
       <div class="card">
         <p class="card-title">The assistant made the call worse</p>
-        <p class="card-note">AskNorthwind, Jan–Sep 2025. Nine months, $480,000. It could not correct a bill.</p>
+        <p class="card-note">Jan–Sep 2025. $480,000. It could not correct a bill.</p>
         <svg class="slope" id="slope" viewBox="0 0 520 170" role="img" aria-label="From January to September 2025, containment fell from 16 percent to 10 percent, satisfaction fell from 2.6 to 2.04, and complaints after a session rose from 11 percent to 14 percent."></svg>
       </div>
       <div class="card">
         <p class="card-title">What this count assumes</p>
         <ul class="assumptions">
-          <li>The cost file does not name a currency. Every dollar figure on this page is the file's number, treated as Canadian dollars.</li>
-          <li>Inflow and closes stay at the April–September 2026 average unless a control moves them: 1,185 opened and 1,129 closed.</li>
-          <li>Finishing without a transfer is priced from the cost file, $68 against $121. That premium is 21% of handling effort, and it becomes extra closes only if the slider says so.</li>
-          <li>An instant bill post trims about 37 cases, one day of throughput. It does not raise the monthly close rate.</li>
-          <li>The regulator score moved with days to close, about 5.32 − 0.069 × days. A score of 4.0 sat near 19 days. That describes the last two years, not the next one.</li>
-          <li>There is no agent headcount. Pace converts extra closes into people at $46,000 a year and $68 a complaint. Last year's 617,765 calls, at $7.40, equal about 99 agents of call time. That is an equivalent, not a roster, and the call cost may already include the same people who handle complaints.</li>
-          <li>A missing read still needs a visit. That part cannot post overnight.</li>
+          <li>Dollars are the cost-file numbers, treated as CAD. The file names no currency.</li>
+          <li>Unless a control moves them: 1,185 opened and 1,129 closed a month.</li>
+          <li>Same-system handling is $68. A transfer is $121. The 21% extra closes exist only if that gap becomes free time.</li>
+          <li>No agent headcount. One agent is $46,000 and about 676 complaints a year. Last year's calls equal about 99 agents of call time.</li>
+          <li>A missing read still needs a visit.</li>
         </ul>
       </div>
     </section>
@@ -502,9 +490,6 @@ function sim(preventPct, liftPct, batch, capacityOverride) {
 function fmt(n) {
   return Math.round(n).toLocaleString("en-CA");
 }
-
-document.getElementById("lede").textContent =
-  `Of ${fmt(D.bill_correction_n)} bill corrections, ${fmt(D.bill_correction_within_1_day)} finished the day they were opened. The median is ${D.bill_correction_median_days} days.`;
 
 document.getElementById("ruler").innerHTML = Array.from({ length: 28 }, (_, i) =>
   `<i class="${i === 0 ? "batch" : ""}" title="Day ${i + 1}${i === 0 ? ", nightly billing file" : ", waiting or handoff"}"></i>`
